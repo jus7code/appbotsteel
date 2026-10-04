@@ -1,4 +1,10 @@
-import * as THREE from 'three';
-import { PoseLandmarker } from '@mediapipe/tasks-vision';
+import { createViewer } from './viewer.js';
 
-console.log('Three.js', THREE.REVISION, '| MediaPipe cargado:', typeof PoseLandmarker === 'function');
+const viewer = await createViewer(document.getElementById('scene'), {
+  url: 'models/modelo.glb',
+  onProgress: (p) => { document.getElementById('progress').textContent = `${Math.round(p * 100)}%`; },
+});
+document.getElementById('loading').classList.add('hidden');
+
+// Accesible desde la consola para depurar: window.viewer.bones, etc.
+window.viewer = viewer;

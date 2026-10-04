@@ -1,3 +1,5 @@
 # El modelo pesa ~95 MB: no se versiona (límite de GitHub 100 MB)
 public/models/*.glb
 .DS_Store
+.venv-tools/
+assets/*.glb

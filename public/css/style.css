@@ -1,1 +1,4 @@
-html, body { margin: 0; height: 100%; background: #111; color: #eee; font-family: system-ui, sans-serif; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #15171c; color: #eee; font-family: system-ui, sans-serif; }
+#scene { display: block; width: 100vw; height: 100vh; }
+#loading { position: fixed; inset: 0; display: grid; place-items: center; font-size: 1.2rem; pointer-events: none; }
+#loading.hidden { display: none; }
