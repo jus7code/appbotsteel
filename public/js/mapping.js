@@ -62,10 +62,10 @@ const RULES = [
   { group: 'legs', bone: 'RightFoot',  primary: [toChild('RightToeBase'), dir(LM.R_ANKLE, LM.R_FOOT)] },
 ];
 
-export function createRetargeter(viewer, { landmarkSmoothing = 0.5, boneSmoothing = 0.35 } = {}) {
+export function createRetargeter(viewer, { landmarkSmoothing = 0.9, boneSmoothing = 0.63 } = {}) {
   const { bones, restPose } = viewer;
   const settings = { landmarkSmoothing, boneSmoothing };
-  const enabled = { torso: true, head: true, arms: true, hands: true, legs: true };
+  const enabled = { torso: true, head: true, arms: true, hands: false, legs: true };
 
   // Pasa cada referencia de reposo a espacio local del hueso, para reconstruirla en cada fotograma
   // aunque los padres se hayan movido.
@@ -86,13 +86,18 @@ export function createRetargeter(viewer, { landmarkSmoothing = 0.5, boneSmoothin
 
   const P = [], V = [];
   const _v = new THREE.Vector3();
+  /*
+   * El modelo mira al espectador, así que su derecha queda a la izquierda de la pantalla.
+   * Modo espejo (como un reflejo): el brazo izquierdo del usuario mueve el derecho del modelo,
+   * por eso se intercambian lados y se invierte X. Sin espejo: cada lado mueve el mismo lado.
+   */
   function ingest(world, image, mirror) {
     for (let i = 0; i < world.length; i++) {
       let src = i;
-      if (!mirror) for (const [l, r] of SWAP) { if (i === l) src = r; else if (i === r) src = l; }
+      if (mirror) for (const [l, r] of SWAP) { if (i === l) src = r; else if (i === r) src = l; }
       const p = world[src];
       // MediaPipe: y hacia abajo, z negativo hacia la cámara -> Three.js: y arriba, +Z hacia el espectador
-      _v.set(mirror ? p.x : -p.x, -p.y, -p.z);
+      _v.set(mirror ? -p.x : p.x, -p.y, -p.z);
       if (!P[i]) P[i] = _v.clone(); else P[i].lerp(_v, 1 - settings.landmarkSmoothing);
       // La visibilidad fiable viene en los landmarks de imagen; en worldLandmarks suele llegar a 0
       V[i] = (image[src].visibility ?? 1) >= MIN_VISIBILITY;

@@ -67,6 +67,8 @@ $('rng-smooth').addEventListener('input', (e) => {
   $('out-smooth').textContent = v.toFixed(2);
 });
 $('chk-skeleton').addEventListener('change', (e) => { $('overlay').style.visibility = e.target.checked ? 'visible' : 'hidden'; });
+// Aplica el estado inicial de los controles (el navegador puede restaurarlo al recargar)
+document.querySelectorAll('#settings input').forEach((el) => el.dispatchEvent(new Event(el.type === 'range' ? 'input' : 'change')));
 
 function stopCamera() {
   state.stop?.();
