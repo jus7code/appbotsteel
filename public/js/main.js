@@ -1,6 +1,6 @@
-import { createViewer } from './viewer.js?v=4b';
-import { createPoseDetector, startCamera, runDetection } from './pose.js?v=4b';
-import { createRetargeter } from './mapping.js?v=4b';
+import { createViewer } from './viewer.js?v=4c';
+import { createPoseDetector, startCamera, runDetection } from './pose.js?v=4c';
+import { createRetargeter } from './mapping.js?v=4c';
 
 const $ = (id) => document.getElementById(id);
 const btnCamera = $('btn-camera');
@@ -62,4 +62,5 @@ btnCamera.addEventListener('click', async () => {
 // Mueve los huesos en cada fotograma de render
 const retargeter = createRetargeter(viewer);
 viewer.onFrame(() => retargeter.update(state.pose, state.mirror));
+window.retargeter = retargeter;   // p. ej. retargeter.enabled.legs = false
 window.appState = state;
