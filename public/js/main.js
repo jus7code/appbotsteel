@@ -1,6 +1,6 @@
-import { createViewer } from './viewer.js?v=4c';
-import { createPoseDetector, startCamera, runDetection } from './pose.js?v=4c';
-import { createRetargeter } from './mapping.js?v=4c';
+import { createViewer } from './viewer.js?v=5';
+import { createPoseDetector, startCamera, runDetection } from './pose.js?v=5';
+import { createRetargeter } from './mapping.js?v=5';
 
 const $ = (id) => document.getElementById(id);
 const btnCamera = $('btn-camera');

@@ -24,4 +24,19 @@ cd public && python3 -m http.server 8080
 `localhost` cuenta como contexto seguro, así que la cámara funciona sin HTTPS.
 
 ## Producción
-https://botsim.traumado.top → túnel Cloudflare → Nginx en 127.0.0.1:8080
+```
+navegador ──HTTPS──> Cloudflare (botsim.traumado.top) ──túnel──> cloudflared (VM)
+                                                                    └─> Nginx 127.0.0.1:8080 -> /var/www/botsim
+```
+- **Cloudflare Zero Trust → Tunnels → Public Hostname:** `botsim.traumado.top` → `http://localhost:8080`.
+- **Nginx** (`deploy/nginx-botsim.conf`) solo escucha en localhost; no se abre ningún puerto en Azure.
+  Es un servicio systemd habilitado: arranca solo al reiniciar la VM (`systemctl status nginx`).
+- **Desplegar cambios:** `./deploy/deploy.sh` (copia `public/` a `/var/www/botsim` y recarga Nginx).
+- **Caché:** Cloudflare guarda los `.js` unas horas. Al cambiar un script, sube la versión `?v=` en
+  `public/index.html` y en los `import` de `public/js/main.js`, o purga la caché en el dashboard.
+- Logs: `/var/log/nginx/botsim.access.log` y `botsim.error.log`.
+
+## Herramientas
+- `tools/compress_glb.py`: reduce las texturas del GLB (original en `assets/`, no versionado).
+  `python3 -m venv .venv-tools && .venv-tools/bin/pip install pillow`
+- `tools/devserver.py`: servidor local sin caché para desarrollo.
