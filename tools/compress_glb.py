@@ -3,7 +3,8 @@
 Uso: .venv-tools/bin/python tools/compress_glb.py entrada.glb salida.glb [tam_max]
 
 Las texturas sin transparencia se guardan como JPEG; las que tienen alfa siguen en PNG.
-La geometría y el esqueleto no se tocan.
+Además convierte materiales KHR_materials_pbrSpecularGlossiness (que Three.js ya no soporta y
+muestra sin color) a metallic-roughness estándar. La geometría y el esqueleto no se tocan.
 """
 import io
 import json
@@ -44,11 +45,37 @@ def shrink(raw, max_size):
     return out.getvalue(), 'image/jpeg'
 
 
+def convert_spec_gloss(gltf):
+    """Spec/gloss -> metal/rough: el difuso pasa a color base, metal 0, rugosidad = 1 - brillo (mín. 0.35)."""
+    count = 0
+    for mat in gltf.get('materials', []):
+        sg = mat.get('extensions', {}).pop('KHR_materials_pbrSpecularGlossiness', None)
+        if sg is None:
+            continue
+        pbr = {'baseColorFactor': sg.get('diffuseFactor', [1, 1, 1, 1]), 'metallicFactor': 0.0,
+               # Mínimo 0.35: sin mapa de entorno, una superficie espejo se ve plana
+               'roughnessFactor': max(0.35, 1.0 - sg.get('glossinessFactor', 1.0))}
+        if 'diffuseTexture' in sg:
+            pbr['baseColorTexture'] = sg['diffuseTexture']
+        mat['pbrMetallicRoughness'] = pbr
+        if not mat['extensions']:
+            del mat['extensions']
+        count += 1
+    for key in ('extensionsUsed', 'extensionsRequired'):
+        if key in gltf:
+            gltf[key] = [e for e in gltf[key] if e != 'KHR_materials_pbrSpecularGlossiness']
+            if not gltf[key]:
+                del gltf[key]
+    if count:
+        print(f'{count} materiales spec/gloss convertidos a metal/rough')
+
+
 def main():
     src, dst = sys.argv[1], sys.argv[2]
     max_size = int(sys.argv[3]) if len(sys.argv) > 3 else 1024
     gltf, binchunk = read_glb(src)
     views = gltf['bufferViews']
+    convert_spec_gloss(gltf)
 
     replaced = {}
     for im in gltf.get('images', []):
