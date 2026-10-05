@@ -27,6 +27,7 @@ export async function startCamera(video) {
   });
   video.srcObject = stream;
   await video.play();
+  return () => { stream.getTracks().forEach((t) => t.stop()); video.srcObject = null; };
 }
 
 /**
@@ -37,8 +38,10 @@ export function runDetection(video, overlay, landmarker, onResult) {
   const ctx = overlay.getContext('2d');
   const draw = new DrawingUtils(ctx);
   let lastVideoTime = -1;
+  let running = true;
 
   function loop() {
+    if (!running) { ctx.clearRect(0, 0, overlay.width, overlay.height); return; }
     if (video.readyState >= 2 && video.currentTime !== lastVideoTime) {
       lastVideoTime = video.currentTime;
       overlay.width = video.videoWidth;
@@ -56,4 +59,5 @@ export function runDetection(video, overlay, landmarker, onResult) {
     video.requestVideoFrameCallback ? video.requestVideoFrameCallback(loop) : requestAnimationFrame(loop);
   }
   loop();
+  return () => { running = false; };
 }

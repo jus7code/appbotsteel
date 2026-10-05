@@ -54,6 +54,7 @@ const RULES = [
 
 export function createRetargeter(viewer, { landmarkSmoothing = 0.5, boneSmoothing = 0.35 } = {}) {
   const { bones, restPose } = viewer;
+  const settings = { landmarkSmoothing, boneSmoothing };
   const enabled = { torso: true, head: true, arms: true, legs: true };
 
   // Pasa cada referencia de reposo a espacio local del hueso, para reconstruirla en cada fotograma
@@ -82,7 +83,7 @@ export function createRetargeter(viewer, { landmarkSmoothing = 0.5, boneSmoothin
       const p = world[src];
       // MediaPipe: y hacia abajo, z negativo hacia la cámara -> Three.js: y arriba, +Z hacia el espectador
       _v.set(mirror ? p.x : -p.x, -p.y, -p.z);
-      if (!P[i]) P[i] = _v.clone(); else P[i].lerp(_v, 1 - landmarkSmoothing);
+      if (!P[i]) P[i] = _v.clone(); else P[i].lerp(_v, 1 - settings.landmarkSmoothing);
       // La visibilidad fiable viene en los landmarks de imagen; en worldLandmarks suele llegar a 0
       V[i] = (image[src].visibility ?? 1) >= MIN_VISIBILITY;
     }
@@ -136,10 +137,10 @@ export function createRetargeter(viewer, { landmarkSmoothing = 0.5, boneSmoothin
       } else {
         _qT.copy(restPose.get(b));            // sin datos: vuelve suavemente a la pose A
       }
-      b.quaternion.copy(_qPrev).slerp(_qT, 1 - boneSmoothing);
+      b.quaternion.copy(_qPrev).slerp(_qT, 1 - settings.boneSmoothing);
       b.updateWorldMatrix(false, true);
     }
   }
 
-  return { update, enabled };
+  return { update, enabled, settings };
 }

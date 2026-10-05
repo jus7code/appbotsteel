@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>BotSim</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=dev">
   <script type="importmap">
   {
     "imports": {
@@ -23,7 +23,22 @@
     <button id="btn-camera" disabled>Iniciar cámara</button>
     <label><input type="checkbox" id="chk-mirror" checked> Modo espejo</label>
     <span id="status" class="status off">Cámara apagada</span>
+    <button id="btn-settings" class="ghost" title="Ajustes">⚙</button>
   </div>
+
+  <div id="settings" class="panel hidden">
+    <fieldset>
+      <legend>Partes del cuerpo</legend>
+      <label><input type="checkbox" data-group="arms" checked> Brazos</label>
+      <label><input type="checkbox" data-group="legs" checked> Piernas</label>
+      <label><input type="checkbox" data-group="torso" checked> Torso</label>
+      <label><input type="checkbox" data-group="head" checked> Cabeza</label>
+    </fieldset>
+    <label class="range">Suavizado <input type="range" id="rng-smooth" min="0" max="0.9" step="0.05" value="0.5"><output id="out-smooth">0.50</output></label>
+    <label><input type="checkbox" id="chk-skeleton" checked> Dibujar esqueleto en el vídeo</label>
+  </div>
+
+  <div id="error" class="panel error hidden"></div>
 
   <div id="cam-box" class="hidden">
     <video id="video" playsinline muted></video>
@@ -31,6 +46,6 @@
     <span id="fps"></span>
   </div>
 
-  <script type="module" src="js/main.js?v=5"></script>
+  <script type="module" src="js/main.js?v=dev"></script>
 </body>
 </html>

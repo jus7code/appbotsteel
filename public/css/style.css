@@ -20,3 +20,13 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #15171c; col
 #cam-box video, #cam-box canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 #cam-box.mirror video, #cam-box.mirror canvas { transform: scaleX(-1); }
 #fps { position: absolute; left: 6px; top: 4px; font-size: .75rem; color: #0f0; text-shadow: 0 0 3px #000; }
+
+#toolbar button.ghost { background: transparent; font-size: 1.2rem; padding: 4px 8px; }
+#toolbar button.stop { background: #c0392b; }
+.panel { position: fixed; top: 64px; left: 12px; background: rgba(20, 22, 28, .92); padding: 12px 14px;
+  border-radius: 10px; display: flex; flex-direction: column; gap: 10px; font-size: .9rem; max-width: 300px; }
+.panel fieldset { border: 1px solid #333; border-radius: 6px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.panel .range { display: flex; align-items: center; gap: 8px; }
+.panel .range input { flex: 1; }
+.panel.error { background: #5a1f24; color: #ffd0d0; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 420px; text-align: center; }
+@media (max-width: 600px) { #toolbar { flex-wrap: wrap; right: 12px; } #cam-box { width: 45vw; } }

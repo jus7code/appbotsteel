@@ -32,8 +32,9 @@ navegador ──HTTPS──> Cloudflare (botsim.traumado.top) ──túnel──
 - **Nginx** (`deploy/nginx-botsim.conf`) solo escucha en localhost; no se abre ningún puerto en Azure.
   Es un servicio systemd habilitado: arranca solo al reiniciar la VM (`systemctl status nginx`).
 - **Desplegar cambios:** `./deploy/deploy.sh` (copia `public/` a `/var/www/botsim` y recarga Nginx).
-- **Caché:** Cloudflare guarda los `.js` unas horas. Al cambiar un script, sube la versión `?v=` en
-  `public/index.html` y en los `import` de `public/js/main.js`, o purga la caché en el dashboard.
+- **Caché:** las URLs de scripts y estilos llevan `?v=dev` en el código; `deploy.sh` lo cambia por el
+  hash del commit, así Cloudflare nunca sirve una versión vieja. Los imports nuevos en `main.js`
+  deben llevar también `?v=dev`.
 - Logs: `/var/log/nginx/botsim.access.log` y `botsim.error.log`.
 
 ## Herramientas
