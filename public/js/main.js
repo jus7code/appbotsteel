@@ -1,5 +1,6 @@
 import { createViewer } from './viewer.js';
 import { createPoseDetector, startCamera, runDetection } from './pose.js';
+import { createRetargeter } from './mapping.js';
 
 const $ = (id) => document.getElementById(id);
 const btnCamera = $('btn-camera');
@@ -58,5 +59,7 @@ btnCamera.addEventListener('click', async () => {
   }
 });
 
-// state.pose se usará en la Fase 4 para mover los huesos
+// Mueve los huesos en cada fotograma de render
+const retargeter = createRetargeter(viewer);
+viewer.onFrame(() => retargeter.update(state.pose, state.mirror));
 window.appState = state;
