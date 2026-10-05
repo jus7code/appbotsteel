@@ -4,6 +4,7 @@ import * as THREE from 'three';
 export const LM = {
   NOSE: 0, L_EAR: 7, R_EAR: 8,
   L_SHOULDER: 11, R_SHOULDER: 12, L_ELBOW: 13, R_ELBOW: 14, L_WRIST: 15, R_WRIST: 16,
+  L_PINKY: 17, R_PINKY: 18, L_INDEX: 19, R_INDEX: 20,
   L_HIP: 23, R_HIP: 24, L_KNEE: 25, R_KNEE: 26, L_ANKLE: 27, R_ANKLE: 28, L_FOOT: 31, R_FOOT: 32,
 };
 
@@ -21,10 +22,15 @@ const TORSO_UP = { need: [LM.L_HIP, LM.R_HIP, LM.L_SHOULDER, LM.R_SHOULDER],
 const HIP_SIDE = dir(LM.R_HIP, LM.L_HIP);
 const SHOULDER_SIDE = dir(LM.R_SHOULDER, LM.L_SHOULDER);
 const HEAD_SIDE = dir(LM.R_EAR, LM.L_EAR);
+// Mano: de la muñeca al centro de los nudillos, y de índice a meñique para el giro de la palma
+const handDir = (w, i, p) => ({ need: [w, i, p], get: (P) => mid(P, i, p).sub(P[w]) });
+const HAND_L = [handDir(LM.L_WRIST, LM.L_INDEX, LM.L_PINKY), dir(LM.L_INDEX, LM.L_PINKY)];
+const HAND_R = [handDir(LM.R_WRIST, LM.R_INDEX, LM.R_PINKY), dir(LM.R_INDEX, LM.R_PINKY)];
 const HEAD_FWD = { need: [LM.NOSE, LM.L_EAR, LM.R_EAR], get: (P) => P[LM.NOSE].clone().sub(mid(P, LM.L_EAR, LM.R_EAR)) };
 
 // Referencias en la pose de reposo, en espacio del mundo. El modelo mira a +Z, así que su izquierda es +X.
 const toChild = (child) => ({ child });
+const between = (from, to) => ({ from, to });   // de un hueso a otro (no necesariamente hijo)
 const WORLD_X = { world: new THREE.Vector3(1, 0, 0) };
 const WORLD_Z = { world: new THREE.Vector3(0, 0, 1) };
 
@@ -41,8 +47,12 @@ const RULES = [
   // Brazos
   { group: 'arms', bone: 'LeftArm',      primary: [toChild('LeftForeArm'),  dir(LM.L_SHOULDER, LM.L_ELBOW)] },
   { group: 'arms', bone: 'LeftForeArm',  primary: [toChild('LeftHand'),     dir(LM.L_ELBOW, LM.L_WRIST)] },
+  { group: 'hands', bone: 'LeftHand', primary: [toChild('LeftHandMiddle1'), HAND_L[0]],
+    secondary: [between('LeftHandIndex1', 'LeftHandPinky1'), HAND_L[1]] },
   { group: 'arms', bone: 'RightArm',     primary: [toChild('RightForeArm'), dir(LM.R_SHOULDER, LM.R_ELBOW)] },
   { group: 'arms', bone: 'RightForeArm', primary: [toChild('RightHand'),    dir(LM.R_ELBOW, LM.R_WRIST)] },
+  { group: 'hands', bone: 'RightHand', primary: [toChild('RightHandMiddle1'), HAND_R[0]],
+    secondary: [between('RightHandIndex1', 'RightHandPinky1'), HAND_R[1]] },
   // Piernas
   { group: 'legs', bone: 'LeftUpLeg',  primary: [toChild('LeftLeg'),      dir(LM.L_HIP, LM.L_KNEE)] },
   { group: 'legs', bone: 'LeftLeg',    primary: [toChild('LeftFoot'),     dir(LM.L_KNEE, LM.L_ANKLE)] },
@@ -55,22 +65,22 @@ const RULES = [
 export function createRetargeter(viewer, { landmarkSmoothing = 0.5, boneSmoothing = 0.35 } = {}) {
   const { bones, restPose } = viewer;
   const settings = { landmarkSmoothing, boneSmoothing };
-  const enabled = { torso: true, head: true, arms: true, legs: true };
+  const enabled = { torso: true, head: true, arms: true, hands: true, legs: true };
 
   // Pasa cada referencia de reposo a espacio local del hueso, para reconstruirla en cada fotograma
   // aunque los padres se hayan movido.
   const _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _c = new THREE.Vector3();
   const toLocal = (bone, ref) => {
     let w;
-    if (ref.child) {
-      bones[ref.child].getWorldPosition(_c);
-      bone.getWorldPosition(_p);
+    if (ref.child || ref.from) {
+      bones[ref.child ?? ref.to].getWorldPosition(_c);
+      (ref.child ? bone : bones[ref.from]).getWorldPosition(_p);
       w = _c.sub(_p);
     } else w = ref.world.clone();
     return w.normalize().applyQuaternion(bone.getWorldQuaternion(_q).invert());
   };
   viewer.model.updateMatrixWorld(true);
-  const rules = RULES.filter((r) => bones[r.bone] && [r.primary, r.secondary].every((s) => !s || !s[0].child || bones[s[0].child]))
+  const rules = RULES.filter((r) => bones[r.bone] && [r.primary, r.secondary].every((s) => !s || [s[0].child, s[0].from, s[0].to].every((n) => !n || bones[n])))
     .map((r) => ({ ...r, b: bones[r.bone], ref1: toLocal(bones[r.bone], r.primary[0]), ref2: r.secondary && toLocal(bones[r.bone], r.secondary[0]) }));
   console.info(`Retargeting: ${rules.length}/${RULES.length} reglas activas`, rules.map((r) => r.bone));
 
