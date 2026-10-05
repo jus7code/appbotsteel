@@ -55,7 +55,8 @@ const between = (from, to) => ({ from, to });   // de un hueso a otro (no necesa
 const WORLD_X = { world: new THREE.Vector3(1, 0, 0) };
 const WORLD_Z = { world: new THREE.Vector3(0, 0, 1) };
 // Normal de flexión en reposo: el codo dobla hacia delante (+Z) y la rodilla hacia atrás (-Z)
-const bendRest = (child, toward) => ({ bendOf: child, toward: new THREE.Vector3(...toward) });
+// Si el modelo ya tiene la articulación doblada en reposo, se usa ese plano real (vía `grandchild`)
+const bendRest = (child, grandchild, toward) => ({ bendOf: child, grandchild, toward: new THREE.Vector3(...toward) });
 const ELBOW = [0, 0, 1], KNEE = [0, 0, -1];
 
 /*
@@ -69,19 +70,19 @@ const RULES = [
   // Cabeza: primero el giro lateral (orejas), después hacia dónde mira (nariz)
   { group: 'head', bone: 'Head', primary: [WORLD_X, HEAD_SIDE], secondary: [WORLD_Z, HEAD_FWD], weight: 0.8 },
   // Brazos
-  { group: 'arms', bone: 'LeftArm', bend: true, secondary: [bendRest('LeftForeArm', ELBOW), bend(LM.L_SHOULDER, LM.L_ELBOW, LM.L_WRIST)],      primary: [toChild('LeftForeArm'),  dir(LM.L_SHOULDER, LM.L_ELBOW)] },
+  { group: 'arms', bone: 'LeftArm', bend: true, secondary: [bendRest('LeftForeArm', 'LeftHand', ELBOW), bend(LM.L_SHOULDER, LM.L_ELBOW, LM.L_WRIST)],      primary: [toChild('LeftForeArm'),  dir(LM.L_SHOULDER, LM.L_ELBOW)] },
   { group: 'arms', bone: 'LeftForeArm',  primary: [toChild('LeftHand'),     dir(LM.L_ELBOW, LM.L_WRIST)] },
   { group: 'hands', bone: 'LeftHand', primary: [toChild('LeftHandMiddle1'), HAND_L[0]],
     secondary: [between('LeftHandIndex1', 'LeftHandPinky1'), HAND_L[1]] },
-  { group: 'arms', bone: 'RightArm', bend: true, secondary: [bendRest('RightForeArm', ELBOW), bend(LM.R_SHOULDER, LM.R_ELBOW, LM.R_WRIST)],     primary: [toChild('RightForeArm'), dir(LM.R_SHOULDER, LM.R_ELBOW)] },
+  { group: 'arms', bone: 'RightArm', bend: true, secondary: [bendRest('RightForeArm', 'RightHand', ELBOW), bend(LM.R_SHOULDER, LM.R_ELBOW, LM.R_WRIST)],     primary: [toChild('RightForeArm'), dir(LM.R_SHOULDER, LM.R_ELBOW)] },
   { group: 'arms', bone: 'RightForeArm', primary: [toChild('RightHand'),    dir(LM.R_ELBOW, LM.R_WRIST)] },
   { group: 'hands', bone: 'RightHand', primary: [toChild('RightHandMiddle1'), HAND_R[0]],
     secondary: [between('RightHandIndex1', 'RightHandPinky1'), HAND_R[1]] },
   // Piernas
-  { group: 'legs', bone: 'LeftUpLeg', bend: true, secondary: [bendRest('LeftLeg', KNEE), bend(LM.L_HIP, LM.L_KNEE, LM.L_ANKLE)],  primary: [toChild('LeftLeg'),      dir(LM.L_HIP, LM.L_KNEE)] },
+  { group: 'legs', bone: 'LeftUpLeg', bend: true, secondary: [bendRest('LeftLeg', 'LeftFoot', KNEE), bend(LM.L_HIP, LM.L_KNEE, LM.L_ANKLE)],  primary: [toChild('LeftLeg'),      dir(LM.L_HIP, LM.L_KNEE)] },
   { group: 'legs', bone: 'LeftLeg',    primary: [toChild('LeftFoot'),     dir(LM.L_KNEE, LM.L_ANKLE)] },
   { group: 'legs', bone: 'LeftFoot',   primary: [toChild('LeftToeBase'), dir(LM.L_ANKLE, LM.L_FOOT)] },
-  { group: 'legs', bone: 'RightUpLeg', bend: true, secondary: [bendRest('RightLeg', KNEE), bend(LM.R_HIP, LM.R_KNEE, LM.R_ANKLE)], primary: [toChild('RightLeg'),     dir(LM.R_HIP, LM.R_KNEE)] },
+  { group: 'legs', bone: 'RightUpLeg', bend: true, secondary: [bendRest('RightLeg', 'RightFoot', KNEE), bend(LM.R_HIP, LM.R_KNEE, LM.R_ANKLE)], primary: [toChild('RightLeg'),     dir(LM.R_HIP, LM.R_KNEE)] },
   { group: 'legs', bone: 'RightLeg',   primary: [toChild('RightFoot'),    dir(LM.R_KNEE, LM.R_ANKLE)] },
   { group: 'legs', bone: 'RightFoot',  primary: [toChild('RightToeBase'), dir(LM.R_ANKLE, LM.R_FOOT)] },
 ];
@@ -100,7 +101,14 @@ export function createRetargeter(viewer, { stability = 0.9, boneSmoothing = 0.5 
     if (ref.bendOf) {
       bones[ref.bendOf].getWorldPosition(_c);
       bone.getWorldPosition(_p);
-      w = new THREE.Vector3().crossVectors(_c.sub(_p).normalize(), ref.toward);
+      const upper = _c.clone().sub(_p).normalize();
+      w = null;
+      if (bones[ref.grandchild]) {
+        const lower = bones[ref.grandchild].getWorldPosition(new THREE.Vector3()).sub(_c).normalize();
+        const n = new THREE.Vector3().crossVectors(upper, lower);
+        if (n.length() > 0.3) w = n;            // doblado más de ~17°: plano fiable
+      }
+      w ??= new THREE.Vector3().crossVectors(upper, ref.toward);
     } else if (ref.child || ref.from) {
       bones[ref.child ?? ref.to].getWorldPosition(_c);
       (ref.child ? bone : bones[ref.from]).getWorldPosition(_p);

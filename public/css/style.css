@@ -30,3 +30,4 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #15171c; col
 .panel .range input { flex: 1; }
 .panel.error { background: #5a1f24; color: #ffd0d0; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 420px; text-align: center; }
 @media (max-width: 600px) { #toolbar { flex-wrap: wrap; right: 12px; } #cam-box { width: 45vw; } }
+#toolbar select { background: #23262e; color: #eee; border: 1px solid #444; border-radius: 6px; padding: 7px 8px; font-size: .95rem; }

@@ -1,6 +1,7 @@
 import { createViewer } from './viewer.js?v=dev';
 import { createPoseDetector, startCamera, runDetection } from './pose.js?v=dev';
 import { createRetargeter } from './mapping.js?v=dev';
+import { MODELS } from './models.js?v=dev';
 
 const $ = (id) => document.getElementById(id);
 const btnCamera = $('btn-camera');
@@ -30,22 +31,62 @@ if (!document.createElement('canvas').getContext('webgl2')) {
   throw new Error('Sin WebGL2');
 }
 
+// Modelo inicial: ?model=id en la URL, la última elección guardada o el primero de la lista
+const selModel = $('sel-model');
+selModel.innerHTML = MODELS.map((m) => `<option value="${m.id}">${m.name}</option>`).join('');
+let saved = null;
+try { saved = localStorage.getItem('botsim.model'); } catch { /* almacenamiento no disponible */ }
+const initialId = [new URLSearchParams(location.search).get('model'), saved].find((id) => MODELS.some((m) => m.id === id)) ?? MODELS[0].id;
+selModel.value = initialId;
+
 // Carga del modelo y de MediaPipe en paralelo
 const detectorPromise = createPoseDetector();
 detectorPromise.catch(() => {});
-let viewer;
+const viewer = createViewer($('scene'));
+let retargeter = null;
+
+async function loadModel(id) {
+  const def = MODELS.find((m) => m.id === id);
+  $('progress').textContent = '0%';
+  $('loading').classList.remove('hidden');
+  selModel.disabled = true;
+  try {
+    await viewer.loadModel(def.url, {
+      aliases: def.bones,
+      onProgress: (p) => { $('progress').textContent = `${Math.round(p * 100)}%`; },
+    });
+    // El retargeter depende de los huesos y de la pose de reposo del modelo: se crea de nuevo
+    const prev = retargeter;
+    retargeter = createRetargeter(viewer, prev ? { stability: prev.settings.stability } : undefined);
+    if (prev) Object.assign(retargeter.enabled, prev.enabled);
+    window.retargeter = retargeter;
+    try { localStorage.setItem('botsim.model', id); } catch { /* sin almacenamiento */ }
+  } finally {
+    $('loading').classList.add('hidden');
+    selModel.disabled = false;
+  }
+}
+
 try {
-  viewer = await createViewer($('scene'), {
-    url: 'models/modelo.glb',
-    onProgress: (p) => { $('progress').textContent = `${Math.round(p * 100)}%`; },
-  });
+  await loadModel(initialId);
 } catch (err) {
   console.error(err);
   fatal('No se pudo cargar el modelo 3D. Revisa tu conexión y recarga la página.');
   throw err;
 }
-$('loading').classList.add('hidden');
 btnCamera.disabled = false;
+
+let currentId = initialId;
+selModel.addEventListener('change', async () => {
+  try {
+    await loadModel(selModel.value);
+    currentId = selModel.value;
+  } catch (err) {
+    console.error(err);
+    alert('No se pudo cargar ese modelo.');
+    selModel.value = currentId;
+  }
+});
 
 const state = { mirror: chkMirror.checked, pose: null, stop: null };
 const applyMirror = () => { state.mirror = chkMirror.checked; camBox.classList.toggle('mirror', state.mirror); };
@@ -53,7 +94,6 @@ chkMirror.addEventListener('change', applyMirror);
 applyMirror();
 
 // Mueve los huesos en cada fotograma de render
-const retargeter = createRetargeter(viewer);
 viewer.onFrame(() => retargeter.update(state.pose, state.mirror));
 
 // Panel de ajustes
@@ -124,4 +164,4 @@ async function startAll() {
 btnCamera.addEventListener('click', () => (state.stop ? stopCamera() : startAll()));
 
 // Para depurar desde la consola
-Object.assign(window, { viewer, retargeter, appState: state });
+Object.assign(window, { viewer, appState: state });

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-export async function createViewer(canvas, { url, onProgress }) {
+export function createViewer(canvas) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -35,35 +35,6 @@ export async function createViewer(canvas, { url, onProgress }) {
   floor.receiveShadow = true;
   scene.add(floor);
 
-  const gltf = await new GLTFLoader().loadAsync(url, (e) => e.total && onProgress?.(e.loaded / e.total));
-  const model = gltf.scene;
-  model.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
-
-  // Normaliza: altura 1.8 m, pies en el suelo, centrado en el origen
-  model.updateMatrixWorld(true);
-  let box = new THREE.Box3().setFromObject(model);
-  const size = box.getSize(new THREE.Vector3());
-  model.scale.multiplyScalar(1.8 / size.y);
-  model.updateMatrixWorld(true);
-  box = new THREE.Box3().setFromObject(model);
-  const center = box.getCenter(new THREE.Vector3());
-  model.position.x -= center.x;
-  model.position.z -= center.z;
-  model.position.y -= box.min.y;
-  scene.add(model);
-
-  // Huesos por nombre limpio: "mixamorig:LeftArm_09" -> "LeftArm"
-  const bones = {};
-  model.traverse((o) => {
-    if (o.isBone) bones[o.name.replace(/^mixamorig:?/, '').replace(/_\d+$/, '')] = o;
-  });
-  console.groupCollapsed(`Huesos del modelo (${Object.keys(bones).length})`);
-  console.table(Object.entries(bones).map(([short, b]) => ({ nombre: short, original: b.name, padre: b.parent?.name })));
-  console.groupEnd();
-
-  // Guarda la pose de reposo (pose A) para poder volver a ella y calcular rotaciones relativas
-  const restPose = new Map(Object.values(bones).map((b) => [b, b.quaternion.clone()]));
-
   camera.position.set(0, 1.1, 4);
   controls.target.set(0, 0.95, 0);
   controls.update();
@@ -84,5 +55,57 @@ export async function createViewer(canvas, { url, onProgress }) {
     renderer.render(scene, camera);
   });
 
-  return { scene, camera, renderer, model, bones, restPose, onFrame: (cb) => callbacks.push(cb) };
+  const loader = new GLTFLoader();
+  const viewer = { scene, camera, renderer, model: null, bones: {}, restPose: new Map(), onFrame: (cb) => callbacks.push(cb) };
+
+  /** Carga un GLB y sustituye al modelo actual. `aliases` traduce nombres canónicos a los del rig. */
+  viewer.loadModel = async function (url, { aliases, onProgress } = {}) {
+    const gltf = await loader.loadAsync(url, (e) => e.total && onProgress?.(e.loaded / e.total));
+    const model = gltf.scene;
+    model.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
+
+    // Normaliza: altura 1.8 m, pies en el suelo, centrado en el origen
+    model.updateMatrixWorld(true);
+    let box = new THREE.Box3().setFromObject(model);
+    const size = box.getSize(new THREE.Vector3());
+    model.scale.multiplyScalar(1.8 / size.y);
+    model.updateMatrixWorld(true);
+    box = new THREE.Box3().setFromObject(model);
+    const center = box.getCenter(new THREE.Vector3());
+    model.position.x -= center.x;
+    model.position.z -= center.z;
+    model.position.y -= box.min.y;
+
+    // Huesos por nombre limpio: "mixamorig:LeftArm_09" -> "LeftArm", "arm2_l_016" -> "arm2_l"
+    const raw = {};
+    model.traverse((o) => {
+      if (o.isBone) raw[o.name.replace(/^mixamorig:?/, '').replace(/_\d+$/, '')] = o;
+    });
+    console.groupCollapsed(`Huesos de ${url} (${Object.keys(raw).length})`);
+    console.table(Object.entries(raw).map(([short, b]) => ({ nombre: short, original: b.name, padre: b.parent?.name })));
+    console.groupEnd();
+    const bones = aliases
+      ? Object.fromEntries(Object.entries(aliases).filter(([, v]) => raw[v]).map(([k, v]) => [k, raw[v]]))
+      : raw;
+
+    // Retira y libera el modelo anterior
+    if (viewer.model) {
+      scene.remove(viewer.model);
+      viewer.model.traverse((o) => {
+        if (!o.isMesh) return;
+        o.geometry.dispose();
+        for (const m of [].concat(o.material)) {
+          for (const v of Object.values(m)) if (v?.isTexture) v.dispose();
+          m.dispose();
+        }
+      });
+    }
+    scene.add(model);
+
+    // Pose de reposo de cada hueso (pose A en Mixamo) para volver a ella y calcular rotaciones relativas
+    Object.assign(viewer, { model, bones, restPose: new Map(Object.values(bones).map((b) => [b, b.quaternion.clone()])) });
+    return viewer;
+  };
+
+  return viewer;
 }
