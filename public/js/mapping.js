@@ -26,6 +26,7 @@ const MIN_VISIBILITY = 0.5;
 export function createRetargeter(viewer, { landmarkSmoothing = 0.5, boneSmoothing = 0.35 } = {}) {
   const { bones, restPose } = viewer;
   const chains = CHAINS.filter((c) => bones[c.bone] && bones[c.child]);
+  console.info(`Retargeting: ${chains.length}/${CHAINS.length} cadenas activas`, chains.map((c) => c.bone));
   const smoothed = [];       // landmarks suavizados (THREE.Vector3 en espacio del mundo)
   const visible = [];
 
@@ -38,7 +39,7 @@ export function createRetargeter(viewer, { landmarkSmoothing = 0.5, boneSmoothin
    * En modo espejo, el lado izquierdo del usuario mueve el lado izquierdo del modelo: el modelo
    * actúa como el reflejo del usuario. Sin espejo, se intercambian lados y se invierte X.
    */
-  function ingest(world, mirror) {
+  function ingest(world, image, mirror) {
     for (let i = 0; i < world.length; i++) {
       let src = i;
       if (!mirror) for (const [l, r] of SWAP) { if (i === l) src = r; else if (i === r) src = l; }
@@ -46,12 +47,13 @@ export function createRetargeter(viewer, { landmarkSmoothing = 0.5, boneSmoothin
       _a.set(mirror ? p.x : -p.x, -p.y, -p.z);
       if (!smoothed[i]) smoothed[i] = _a.clone();
       else smoothed[i].lerp(_a, 1 - landmarkSmoothing);
-      visible[i] = (p.visibility ?? 1) >= MIN_VISIBILITY;
+      // La visibilidad fiable viene en los landmarks de imagen; en worldLandmarks suele llegar a 0
+      visible[i] = (image[src].visibility ?? 1) >= MIN_VISIBILITY;
     }
   }
 
   function update(pose, mirror) {
-    if (pose) ingest(pose.worldLandmarks, mirror);
+    if (pose) ingest(pose.worldLandmarks, pose.landmarks, mirror);
 
     for (const c of chains) {
       const bone = bones[c.bone];
