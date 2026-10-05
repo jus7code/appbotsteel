@@ -19,4 +19,15 @@ export const MODELS = [
       RightUpLeg: 'leg2_r', RightLeg: 'leg3_r', RightFoot: 'Foot_r',
     },
   },
+  {
+    id: 'drone',
+    name: 'Mech Drone',
+    url: 'models/drone.glb',
+    // Solo brazos. Los nombres del autor no coinciden con el lado real: ArmR está en +X, que es la
+    // izquierda del modelo (mira a +Z), así que se asignan por posición.
+    bones: {
+      LeftArm: 'ArmR1', LeftForeArm: 'ArmR2', LeftHand: 'PinceL',
+      RightArm: 'ArmL1', RightForeArm: 'ArmL2', RightHand: 'PinceR',
+    },
+  },
 ];

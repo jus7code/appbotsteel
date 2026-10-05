@@ -112,7 +112,7 @@ export function createRetargeter(viewer, { stability = 0.9, boneSmoothing = 0.5 
     } else if (ref.child || ref.from) {
       bones[ref.child ?? ref.to].getWorldPosition(_c);
       (ref.child ? bone : bones[ref.from]).getWorldPosition(_p);
-      w = _c.sub(_p);
+      w = _c.clone().sub(_p);               // clone: _c/_p se reutilizan en la siguiente llamada
     } else w = ref.world.clone();
     return w.normalize().applyQuaternion(bone.getWorldQuaternion(_q).invert());
   };
