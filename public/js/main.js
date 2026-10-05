@@ -62,8 +62,7 @@ document.querySelectorAll('[data-group]').forEach((el) =>
   el.addEventListener('change', () => { retargeter.enabled[el.dataset.group] = el.checked; }));
 $('rng-smooth').addEventListener('input', (e) => {
   const v = Number(e.target.value);
-  retargeter.settings.landmarkSmoothing = v;
-  retargeter.settings.boneSmoothing = v * 0.7;
+  retargeter.settings.stability = v;
   $('out-smooth').textContent = v.toFixed(2);
 });
 $('chk-skeleton').addEventListener('change', (e) => { $('overlay').style.visibility = e.target.checked ? 'visible' : 'hidden'; });
