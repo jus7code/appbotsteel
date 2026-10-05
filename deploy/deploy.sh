@@ -6,7 +6,7 @@ sudo mkdir -p /var/www/botsim
 sudo rsync -a --delete public/ /var/www/botsim/
 # Versiona las URLs de scripts y estilos con el commit actual para invalidar la caché de Cloudflare
 VERSION="$(git rev-parse --short HEAD)$(git diff --quiet HEAD -- public || echo "-$(date +%s)")"
-sudo sed -i "s/?v=dev/?v=${VERSION}/g" /var/www/botsim/index.html /var/www/botsim/js/main.js
+sudo sed -i "s/?v=dev/?v=${VERSION}/g" /var/www/botsim/index.html /var/www/botsim/js/*.js
 sudo chown -R root:root /var/www/botsim
 sudo chmod -R a+rX /var/www/botsim
 sudo install -m 644 deploy/nginx-botsim.conf /etc/nginx/sites-available/botsim

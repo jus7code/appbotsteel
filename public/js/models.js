@@ -4,11 +4,11 @@
  * Los huesos que no existan en un modelo hacen que su regla se omita.
  */
 export const MODELS = [
-  { id: 'spartan', name: 'Spartan', url: 'models/spartan.glb' },
+  { id: 'spartan', name: 'Spartan', url: 'models/spartan.glb?v=dev' },
   {
     id: 'robot',
     name: 'Robot M.A.N.U.L.',
-    url: 'models/robot.glb',
+    url: 'models/robot.glb?v=dev',
     bones: {
       // Sin columna separada: Torso1 es la raíz del cuerpo (arrastra cuello, brazos y pelvis)
       Hips: 'Torso1', Spine2: 'Neck', Neck: 'Neck', Head: 'Head',
@@ -22,7 +22,7 @@ export const MODELS = [
   {
     id: 'drone',
     name: 'Mech Drone',
-    url: 'models/drone.glb',
+    url: 'models/drone.glb?v=dev',
     // Solo brazos. Los nombres del autor no coinciden con el lado real: ArmR está en +X, que es la
     // izquierda del modelo (mira a +Z), así que se asignan por posición.
     bones: {
