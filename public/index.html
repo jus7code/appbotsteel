@@ -18,6 +18,19 @@
 <body>
   <canvas id="scene"></canvas>
   <div id="loading">Cargando modelo… <span id="progress">0%</span></div>
+
+  <div id="toolbar">
+    <button id="btn-camera" disabled>Iniciar cámara</button>
+    <label><input type="checkbox" id="chk-mirror" checked> Modo espejo</label>
+    <span id="status" class="status off">Cámara apagada</span>
+  </div>
+
+  <div id="cam-box" class="hidden">
+    <video id="video" playsinline muted></video>
+    <canvas id="overlay"></canvas>
+    <span id="fps"></span>
+  </div>
+
   <script type="module" src="js/main.js"></script>
 </body>
 </html>
